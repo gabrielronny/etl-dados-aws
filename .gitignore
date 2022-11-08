@@ -6,3 +6,6 @@
 out/
 !**/src/main/**/out/
 !**/src/test/**/out/
+
+### Virtual Env
+venv/*
