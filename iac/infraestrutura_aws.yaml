@@ -74,7 +74,7 @@ Resources:
     Description: "S3 para dados brutos"
     Properties: 
       AccessControl: Private
-      BucketName: !Sub ${AWS::StackName}-${Client}-bucket-dados-brutos
+      BucketName: !Sub ${AWS::StackName}-bucket-dados-brutos
       PublicAccessBlockConfiguration: 
         BlockPublicAcls: true
         BlockPublicPolicy: true
@@ -85,7 +85,7 @@ Resources:
     Description: "S3 para dados processados e tratados"
     Properties: 
       AccessControl: Private
-      BucketName: !Sub ${AWS::StackName}-${Client}-bucket-dados-tratados
+      BucketName: !Sub ${AWS::StackName}-bucket-dados-tratados
       PublicAccessBlockConfiguration: 
         BlockPublicAcls: true
         BlockPublicPolicy: true
@@ -97,13 +97,13 @@ Resources:
       CidrBlock: !Ref VpcCidr
       Tags:
         - Key: Name
-          Value: !Sub vpc-${AWS::StackName}-${Client}
+          Value: !Sub vpc-${AWS::StackName}
   InternetGateway:
     Type: AWS::EC2::InternetGateway
     Properties:
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-${Client}
+          Value: !Sub ${AWS::StackName}
   InternetGatewayAttachment:
     DependsOn: [InternetGateway, Vpc]
     Type: AWS::EC2::VPCGatewayAttachment
@@ -117,7 +117,7 @@ Resources:
       VpcId: !Ref Vpc
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-${Client}-public
+          Value: !Sub ${AWS::StackName}-public
   PublicRouteTableRouteInternet:
     DependsOn: [PublicRouteTable, InternetGateway]
     Type: AWS::EC2::Route
@@ -134,7 +134,7 @@ Resources:
       VpcId: !Ref Vpc
       Tags:
         - Key: Name
-          Value: !Sub subnet-publica-${AWS::StackName}-${Client}
+          Value: !Sub subnet-publica-${AWS::StackName}
   RouteTableAssociationPublicSubnet:
     DependsOn: [PublicRouteTable, PublicSubnet]
     Type: AWS::EC2::SubnetRouteTableAssociation
@@ -161,7 +161,7 @@ Resources:
           CidrIp: 0.0.0.0/0
       Tags:
         - Key: Name
-          Value: !Sub sg-${AWS::StackName}-${Client}
+          Value: !Sub sg-${AWS::StackName}
   Instance:
     DependsOn: [RouteTableAssociationPublicSubnet, InstanceSecurityGroup]
     Type: AWS::EC2::Instance
@@ -212,4 +212,4 @@ Resources:
         - !Ref InstanceSecurityGroup
       Tags:
         - Key: Name
-          Value: !Sub girassol01-${AWS::StackName}-${Client}
+          Value: !Sub girassol01-${AWS::StackName}
