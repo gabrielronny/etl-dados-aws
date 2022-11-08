@@ -1,0 +1,215 @@
+AWSTemplateFormatVersion: 2010-09-09
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Global
+        Parameters:
+          - Client
+      - Label:
+          default: VPC
+        Parameters:
+          - VpcCidr
+          - VpcPublicSubnetZone
+          - VpcPublicSubnetCidr
+      - Label:
+          default: EC2
+        Parameters:
+          - Ec2KeyPairName
+          - Ec2AmiId
+          - Ec2IamInstanceProfile
+          - Ec2JupyterPassword
+    ParameterLabels:
+      Client:
+        default: Cliente
+      VpcCidr:
+        default: VPC CIDR
+      VpcPublicSubnetCidr:
+        default: Subnet Publico CIDR
+      VpcPublicSubnetZone:
+        default: Zona da Subnet Publica
+      Ec2KeyPairName:
+        default: Chave de Acesso
+      Ec2AmiId:
+        default: AMI
+      Ec2IamInstanceProfile:
+        default: IAM Instance Profile Id
+Parameters:
+  Client:
+    Type: String
+    Description: O nome do cliente
+    Default: sptech
+  VpcCidr:
+    Type: String
+    AllowedPattern: '((\d{1,3})\.){3}\d{1,3}/\d{1,2}'
+    Description: O bloco CIDR da VPC (ex. 10.10.0.0/24)
+    Default: 10.16.0.0/24
+  VpcPublicSubnetCidr:
+    Type: String
+    AllowedPattern: '((\d{1,3})\.){3}\d{1,3}/\d{1,2}'
+    Description: O bloco CIDR da Subnet Publica (ex. 10.10.0.0/24)
+    Default: 10.16.0.0/24
+  VpcPublicSubnetZone:
+    Type: AWS::EC2::AvailabilityZone::Name
+    Description: A zona de disponibilidade para criar a Subnet Publica 
+    Default: us-east-1a
+  Ec2KeyPairName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: Chave de acesso a instancia
+  Ec2AmiId:
+    Type: String
+    Description: Id da AMI
+    Default: ami-0f9fc25dd2506cf6d
+  Ec2IamInstanceProfile:
+    Type: String
+    Description: O nome do Instance Profile
+    Default: EMR_EC2_DefaultRole
+  Ec2JupyterPassword:
+    Type: String
+    NoEcho: true
+    Description: A senha de acesso ao jupyter
+Resources:
+  BucketDadosBrutos:
+    Type: "AWS::S3::Bucket"
+    Description: "S3 para dados brutos"
+    Properties: 
+      AccessControl: Private
+      BucketName: !Sub ${AWS::StackName}-${Client}-bucket-dados-brutos
+      PublicAccessBlockConfiguration: 
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+  BucketDadosTratados:
+    Type: "AWS::S3::Bucket"
+    Description: "S3 para dados processados e tratados"
+    Properties: 
+      AccessControl: Private
+      BucketName: !Sub ${AWS::StackName}-${Client}-bucket-dados-tratados
+      PublicAccessBlockConfiguration: 
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+  Vpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCidr
+      Tags:
+        - Key: Name
+          Value: !Sub vpc-${AWS::StackName}-${Client}
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-${Client}
+  InternetGatewayAttachment:
+    DependsOn: [InternetGateway, Vpc]
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref Vpc
+  PublicRouteTable:
+    DependsOn: Vpc
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-${Client}-public
+  PublicRouteTableRouteInternet:
+    DependsOn: [PublicRouteTable, InternetGateway]
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+      RouteTableId: !Ref PublicRouteTable
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Ref VpcPublicSubnetZone
+      CidrBlock: !Ref VpcPublicSubnetCidr
+      MapPublicIpOnLaunch: true
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !Sub subnet-publica-${AWS::StackName}-${Client}
+  RouteTableAssociationPublicSubnet:
+    DependsOn: [PublicRouteTable, PublicSubnet]
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet
+  InstanceSecurityGroup:
+    DependsOn: Vpc
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow only https ingress
+      VpcId: !Ref Vpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub sg-${AWS::StackName}-${Client}
+  Instance:
+    DependsOn: [RouteTableAssociationPublicSubnet, InstanceSecurityGroup]
+    Type: AWS::EC2::Instance
+    Properties:
+      KeyName: !Ref Ec2KeyPairName
+      ImageId: !Ref Ec2AmiId
+      InstanceType: t2.large
+      SubnetId: !Ref PublicSubnet
+      IamInstanceProfile: !Ref Ec2IamInstanceProfile
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          amazon-linux-extras install java-openjdk11 -y
+          curl -O https://dlcdn.apache.org/spark/spark-3.2.1/spark-3.2.1-bin-hadoop3.2.tgz
+          tar xzf spark-3.2.1-bin-hadoop3.2.tgz -C /usr/local --owner root --group root --no-same-owner
+          rm -rf spark-3.2.1-bin-hadoop3.2.tgz
+          mv /usr/local/spark-3.2.1-bin-hadoop3.2 /usr/local/spark
+          pip3 install pyspark --no-cache-dir
+          pip3 install boto3 --no-cache-dir
+          pip3 install jupyterlab --no-cache-dir
+          export URL_DATABASE_AZURE_PROD=jdbc:sqlserver://sql-pesquisa-invacao-grupo02-prod.database.windows.net:1433;database=sqldb-pesquisa-inovacao-grupo02-prod
+          export PASS_DATABASE_AZURE_PROD=Senha@secreta
+          export USER_DATABASE_AZURE_PROD=admin-prod
+          export URL_DATABASE_AZURE_DEV=jdbc:sqlserver://sql-pesquisa-inovacao-grupo02-dev.database.windows.net:1433;database=sqldb-pesquisa-inovacao-grupo02-dev
+          export PASS_DATABASE_AZURE_DEV=admin-dev
+          export USER_DATABASE_AZURE_DEV=Senha@ultrasecreta
+          touch /lib/systemd/system/jupyter.service
+          echo "[Unit]" >> /lib/systemd/system/jupyter.service
+          echo "Description=Jupyter Notebook" >> /lib/systemd/system/jupyter.service
+          echo "[Service]" >> /lib/systemd/system/jupyter.service
+          echo "Type=simple" >> /lib/systemd/system/jupyter.service
+          echo "ExecStart=/opt/jupyter/script/start.sh" >> /lib/systemd/system/jupyter.service
+          echo "Restart=always" >> /lib/systemd/system/jupyter.service
+          echo "RestartSec=10" >> /lib/systemd/system/jupyter.service
+          echo "[Install]" >> /lib/systemd/system/jupyter.service
+          echo "WantedBy=multi-user.target" >> /lib/systemd/system/jupyter.service
+          mkdir /opt/jupyter
+          mkdir /opt/jupyter/notebook
+          mkdir /opt/jupyter/script
+          touch /opt/jupyter/script/start.sh
+          echo '#!/bin/bash' >> /opt/jupyter/script/start.sh
+          echo '/usr/bin/python3 -m notebook --NotebookApp.notebook_dir=/opt/jupyter/notebook --NotebookApp.password=$(/usr/bin/python3 -c "from notebook.auth import passwd; print(passwd(\"urubu100\"))")  --allow-root --ip 0.0.0.0 --port 80' >> /opt/jupyter/script/start.sh
+          chmod +x /opt/jupyter/script/start.sh
+          systemctl daemon-reload
+          systemctl start jupyter
+          systemctl enable jupyter
+      SecurityGroupIds:
+        - !Ref InstanceSecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Sub girassol01-${AWS::StackName}-${Client}
