@@ -7,6 +7,10 @@ out/
 !**/src/main/**/out/
 !**/src/test/**/out/
 
+# Jupyter
+*.ipynb
+
+
 ### Virtual Env
 venv/*
 .env
