@@ -114,7 +114,7 @@ Resources:
     Properties:
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}
+          Value: !Sub igw-${AWS::StackName}
   InternetGatewayAttachment:
     DependsOn: [InternetGateway, Vpc]
     Type: AWS::EC2::VPCGatewayAttachment
@@ -128,7 +128,7 @@ Resources:
       VpcId: !Ref Vpc
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-public
+          Value: !Sub route-table-${AWS::StackName}
   PublicRouteTableRouteInternet:
     DependsOn: [PublicRouteTable, InternetGateway]
     Type: AWS::EC2::Route
