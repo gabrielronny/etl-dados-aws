@@ -59,7 +59,7 @@ Parameters:
   Ec2AmiId:
     Type: String
     Description: Id da AMI
-    Default: ami-08c40ec9ead489470
+    Default: ami-0f9fc25dd2506cf6d
   Ec2IamInstanceProfile:
     Type: String
     Description: O nome do Instance Profile
@@ -193,12 +193,8 @@ Resources:
           pip3 install pyspark --no-cache-dir
           pip3 install boto3 --no-cache-dir
           pip3 install jupyterlab --no-cache-dir
-          export URL_DATABASE_AZURE_PROD=jdbc:sqlserver://sql-pesquisa-invacao-grupo02-prod.database.windows.net:1433;database=sqldb-pesquisa-inovacao-grupo02-prod
-          export PASS_DATABASE_AZURE_PROD="Senha@secreta"
-          export USER_DATABASE_AZURE_PROD=admin-prod
-          export URL_DATABASE_AZURE_DEV=jdbc:sqlserver://sql-pesquisa-inovacao-grupo02-dev.database.windows.net:1433;database=sqldb-pesquisa-inovacao-grupo02-dev
-          export PASS_DATABASE_AZURE_DEV=admin-dev
-          export USER_DATABASE_AZURE_DEV=Senha@ultrasecreta
+          echo "[Unit]" >> /lib/systemd/system/jupyter.service
+          source ~/.bashrc
           touch /lib/systemd/system/jupyter.service
           echo "[Unit]" >> /lib/systemd/system/jupyter.service
           echo "Description=Jupyter Notebook" >> /lib/systemd/system/jupyter.service
