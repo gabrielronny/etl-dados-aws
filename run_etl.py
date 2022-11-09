@@ -187,7 +187,7 @@ df_inmet_bruto = spark.read \
     .option('encoding', 'ISO-8859-1') \
     .option('delimiter', ';') \
     .option('header', 'true') \
-    .csv(f'{BUCKETS[0].get("s3_dados_tratados")}/inmet/INMET_SE_SP_A771_SAO PAULO - INTERLAGOS_01-01-2021_A_31-12-2021.csv')
+    .csv(f'{BUCKETS[0].get("s3_dados_brutos")}/inmet/INMET_SE_SP_A771_SAO PAULO - INTERLAGOS_01-01-2021_A_31-12-2021.csv')
 
 df_inmet_tratado = df_inmet_bruto.select(
     col('`Data`').cast(StringType()).alias('DATA'),
@@ -235,7 +235,6 @@ df_enem_itens_prova_bruto = spark.read \
     .option('header', 'true') \
     .csv(f'{BUCKETS[0].get("s3_dados_tratados")}/enem/ITENS_PROVA_2021.csv')
 
-
 df_enem_itens_prova_tratado = df_enem_itens_prova_bruto.select(
     col('CO_POSICAO').cast(IntegerType()),
     col('SG_AREA').cast(StringType()),
@@ -272,7 +271,7 @@ df_enem_itens_prova_tratado.unpersist()
 df_enem_microdados_bruto = spark.read \
     .option('delimiter', ';') \
     .option('header', 'true') \
-    .csv(f'{BUCKETS[0].get("s3_dados_tratados")}/enem/MICRODADOS_ENEM_2021.csv')
+    .csv(f'{BUCKETS[0].get("s3_dados_brutos")}/enem/MICRODADOS_ENEM_2021.csv')
 
 df_enem_microdados_tratado = df_enem_microdados_bruto.select(
     col('NU_INSCRICAO').cast(StringType()).alias('NUMERO_INSCRICAO'),
