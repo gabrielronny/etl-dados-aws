@@ -74,7 +74,7 @@ Resources:
     Description: "S3 para dados brutos"
     Properties: 
       AccessControl: Private
-      BucketName: !Sub ${AWS::StackName}-bucket-dados-brutos
+      BucketName: !Sub bucket-${AWS::StackName}-dados-brutos
       PublicAccessBlockConfiguration: 
         BlockPublicAcls: true
         BlockPublicPolicy: true
@@ -85,8 +85,19 @@ Resources:
     Description: "S3 para dados processados e tratados"
     Properties: 
       AccessControl: Private
-      BucketName: !Sub ${AWS::StackName}-bucket-dados-tratados
+      BucketName: !Sub bucket-${AWS::StackName}-dados-tratados
       PublicAccessBlockConfiguration: 
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+  BucketLogApplication:
+    Type: "AWS::S3::Bucket"
+    Description: "S3 para logs da aplicação"
+    Properties:
+      AccessControl: Private
+      BucketName: !Sub bucket-${AWS::StackName}-logs
+      PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         BlockPublicPolicy: true
         IgnorePublicAcls: true
