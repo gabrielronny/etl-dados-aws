@@ -3,11 +3,13 @@ from pyspark.sql import SparkSession
 from datetime import datetime
 from typing import Sequence, Mapping, Any
 import os
+import logging
 
 from pyspark.sql.functions import col
 from pyspark.sql.types import IntegerType
 from pyspark.sql.types import StringType
 from pyspark.sql.types import DoubleType
+
 
 ## BUCKETS S3
 BUCKETS: Sequence[Mapping[str, Any]] = [
@@ -39,12 +41,18 @@ AMBIENTE: Sequence[Mapping[str, Any]] = [
 # DATA DE PROCESSAMENTO
 DATE_NOW = datetime.now().strftime("%d_%m_%Y")
 
+
+logging.basicConfig(filename=f'{BUCKETS[2].get("s3_logs")}/DATE_NOW/log.txt', level=logging.DEBUG,
+                    format="%(asctime)s %(message)s")
+
+logging.info('Sessão do SPARK iniciada')
 ## Iniciando Sessão no Spark
 conf = SparkConf()
 conf.set('spark.jars.packages', 'org.apache.hadoop:hadoop-aws:3.2.2,com.microsoft.azure:spark-mssql-connector_2.12:1.2.0')
 conf.set('spark.hadoop.fs.s3a.aws.credentials.provider', 'com.amazonaws.auth.InstanceProfileCredentialsProvider')
 spark = SparkSession.builder.config(conf=conf).getOrCreate()
 
+logging.info('Leitura dataset fies iniciado')
 # Lendo o CSV e tratando o tipo de encoding para a ISO-8859-1
 df_inscricao_fies_20211_bruto = spark.read \
     .option('encoding', 'ISO-8859-1') \
@@ -57,9 +65,11 @@ df_inscricao_fies_20212_bruto = spark.read \
     .option('delimiter', ';') \
     .option('header', 'true') \
     .csv(f'{BUCKETS[0].get("s3_dados_brutos")}/fies/relatorio_inscricao_dados_abertos_fies_22021.csv')
+logging.info('Leitura dataset fies finalizado')
 
 df_inscricao_fies_2021 = df_inscricao_fies_20211_bruto.union(df_inscricao_fies_20212_bruto)
 
+logging.info('Iniciando a equalização do dataset fies')
 df_inscricao_fies_2021_tratado = df_inscricao_fies_2021.select(
     col('Ano do processo seletivo').cast(StringType()).alias('ANO_PROCESSO_SELETIVO'),
     col('Semestre do processo seletivo').cast(StringType()).alias('SEMESTRE_PROCESSO_SELETIVO'),
@@ -117,6 +127,9 @@ df_inscricao_fies_2021_tratado = df_inscricao_fies_2021.select(
     col('Qtde semestre financiado').cast(IntegerType()).alias('QTDE_SEMESTRE_FINANCIADO'),
 )
 
+logging.info('Equalização do dataset fies finalizado')
+
+logging.info('Iniciando upload do dataset fies para S3_DADOS_TRATADOS')
 # Salvando o arquivo processado com os dados de inscrição no fies tratados na S3
 df_inscricao_fies_2021_tratado \
     .coalesce(1) \
@@ -124,6 +137,9 @@ df_inscricao_fies_2021_tratado \
     .mode('append') \
     .option('encoding', 'UTF-8') \
     .csv(f'{BUCKETS[1].get("s3_dados_tratados")}/{DATE_NOW}/fies/')
+logging.info('Upload do dataset fies para S3_DADOS_TRATADOS finalizado')
+
+logging.info(f'Iniciando o insert no database FIES')
 
 df_inscricao_fies_2021_tratado.write.mode("overwrite") \
     .format("jdbc") \
@@ -134,16 +150,22 @@ df_inscricao_fies_2021_tratado.write.mode("overwrite") \
     .option("driver", "com.microsoft.sqlserver.jdbc.SQLServerDriver") \
     .save()
 
+logging.info('Insert no database FIES finalizado')
+logging.info('Removendo dataframe FIES da memória')
 # Liberando o dataframe da memória e disco
 df_inscricao_fies_2021_tratado.unpersist()
+logging.info('Processamento FIES finalizado')
 
 # Dados do prouni
+logging.info('Leitura dataset prouni iniciado')
 df_prouni_2020_bruto = spark.read \
     .option('encoding', 'ISO-8859-1') \
     .option('delimiter', ';') \
     .option('header', 'true') \
     .csv(f'{BUCKETS[0].get("s3_dados_brutos")}/prouni/ProuniRelatorioDadosAbertos2020.csv')
+logging.info('Leitura dataset prouni finalizado')
 
+logging.info('Iniciando a equalização do dataset prouni')
 df_prouni_2020_tratado = df_prouni_2020_bruto.select(
     col('ANO_CONCESSAO_BOLSA').cast(IntegerType()),
     col('CODIGO_EMEC_IES_BOLSA').cast(IntegerType()),
@@ -161,14 +183,19 @@ df_prouni_2020_tratado = df_prouni_2020_bruto.select(
     col('UF_BENEFICIARIO').cast(StringType()),
     col('MUNICIPIO_BENEFICIARIO').cast(StringType()),
 )
+logging.info('Equalização do dataset prouni finalizado')
 
+logging.info('Iniciando upload do dataset prouni para S3_DADOS_TRATADOS')
 df_prouni_2020_tratado \
     .coalesce(1) \
     .write \
     .mode('append') \
     .option('encoding', 'ISO-8859-1') \
     .csv(f'{BUCKETS[1].get("s3_dados_tratados")}/{DATE_NOW}/prouni/')
+logging.info('Upload do dataset prouni para S3_DADOS_TRATADOS finalizado')
 
+
+logging.info('Iniciando o insert no database PROUNI')
 df_prouni_2020_tratado.write.mode("overwrite") \
     .format("jdbc") \
     .option('url', f'{AMBIENTE[0].get("prod-url")}') \
@@ -177,18 +204,23 @@ df_prouni_2020_tratado.write.mode("overwrite") \
     .option("password", f'{AMBIENTE[0].get("pass")}') \
     .option("driver", "com.microsoft.sqlserver.jdbc.SQLServerDriver") \
     .save()
+logging.info('Insert no database PROUNI finalizado')
 
 # Liberando o dataframe da memória e disco
+logging.info('Removendo dataframe PROUNI da memória')
 df_prouni_2020_tratado.unpersist()
-
+logging.info('Processamento PROUNI finalizado')
 
 # Dados de clima Inmet
+logging.info('Leitura dataset INMET iniciado')
 df_inmet_bruto = spark.read \
     .option('encoding', 'ISO-8859-1') \
     .option('delimiter', ';') \
     .option('header', 'true') \
     .csv(f'{BUCKETS[0].get("s3_dados_brutos")}/inmet/INMET_SE_SP_A771_SAO PAULO - INTERLAGOS_01-01-2021_A_31-12-2021.csv')
+logging.info('Leitura dataset inmet finalizado')
 
+logging.info('Iniciando a equalização do dataset INMET')
 df_inmet_tratado = df_inmet_bruto.select(
     col('`Data`').cast(StringType()).alias('DATA'),
     col('`Hora UTC`').cast(StringType()).alias('HORA_UTC'),
@@ -209,13 +241,18 @@ df_inmet_tratado = df_inmet_bruto.select(
     col('`VENTO, VELOCIDADE HORARIA (m/s)`').cast(DoubleType()).alias('VELOCIDADE_VENTO')
 )
 
+logging.info('Equalização do dataset INMET finalizado')
+
+logging.info('Iniciando upload do dataset INMET para S3_DADOS_TRATADOS')
 df_inmet_tratado \
     .coalesce(1) \
     .write \
     .mode('append') \
     .option('encoding', 'ISO-8859-1') \
     .csv(f'{BUCKETS[1].get("s3_dados_tratados")}/{DATE_NOW}/inmet/')
+logging.info('Upload do dataset INMET para S3_DADOS_TRATADOS finalizado')
 
+logging.info('Iniciando o insert no database INMET')
 df_inmet_tratado.write.mode("overwrite") \
     .format("jdbc") \
     .option('url', f'{AMBIENTE[0].get("prod-url")}') \
@@ -224,17 +261,21 @@ df_inmet_tratado.write.mode("overwrite") \
     .option("password", f'{AMBIENTE[0].get("pass")}') \
     .option("driver", "com.microsoft.sqlserver.jdbc.SQLServerDriver") \
     .save()
+logging.info('Insert no database INMET finalizado')
 
 # Liberando o dataframe da memória e disco
+logging.info('Removendo dataframe INMET da memória')
 df_inmet_tratado.unpersist()
 
-
 # Itens prova ENEM
+logging.info('Leitura dataset ENEM_ITENS_PROVA iniciado')
 df_enem_itens_prova_bruto = spark.read \
     .option('delimiter', ';') \
     .option('header', 'true') \
-    .csv(f'{BUCKETS[0].get("s3_dados_tratados")}/enem/ITENS_PROVA_2021.csv')
+    .csv(f'{BUCKETS[0].get("s3_dados_brutos")}/enem/ITENS_PROVA_2021.csv')
+logging.info('Leitura dataset INMET finalizado')
 
+logging.info('Iniciando a equalização do dataset ENEM_ITENS_PROVA')
 df_enem_itens_prova_tratado = df_enem_itens_prova_bruto.select(
     col('CO_POSICAO').cast(IntegerType()),
     col('SG_AREA').cast(StringType()),
@@ -250,12 +291,15 @@ df_enem_itens_prova_tratado = df_enem_itens_prova_bruto.select(
     col('IN_ITEM_ADAPTADO').cast(StringType())
 )
 
+logging.info('Iniciando upload do dataset ENEM_ITENS_PROVA para S3_DADOS_TRATADOS')
 df_enem_itens_prova_tratado \
     .coalesce(1) \
     .write \
     .mode('append') \
     .csv(f'{BUCKETS[1].get("s3_dados_tratados")}/{DATE_NOW}/enem/itens_prova/')
+logging.info('Upload do dataset ENEM_ITENS_PROVA para S3_DADOS_TRATADOS finalizado')
 
+logging.info('Iniciando o insert no database ENEM_ITENS_PROVA')
 df_enem_itens_prova_tratado.write.mode("overwrite") \
     .format("jdbc") \
     .option('url', f'{AMBIENTE[0].get("prod-url")}') \
@@ -264,15 +308,24 @@ df_enem_itens_prova_tratado.write.mode("overwrite") \
     .option("password", f'{AMBIENTE[0].get("pass")}') \
     .option("driver", "com.microsoft.sqlserver.jdbc.SQLServerDriver") \
     .save()
+logging.info('Insert no database ENEM_ITENS_PROVA finalizado')
 
 # Liberando o dataframe da memória e disco
+logging.info('Removendo dataframe ENEM_ITENS_PROVA da memória')
 df_enem_itens_prova_tratado.unpersist()
 
+logging.info('Processamento ENEM_ITENS_PROVA finalizado')
+
+logging.info('Leitura dataset ENEM_MICRODADOS iniciado')
 df_enem_microdados_bruto = spark.read \
     .option('delimiter', ';') \
     .option('header', 'true') \
     .csv(f'{BUCKETS[0].get("s3_dados_brutos")}/enem/MICRODADOS_ENEM_2021.csv')
+logging.info('Leitura dataset ENEM_MICRODADOS finalizado')
 
+df_enem_microdados_bruto = df_enem_microdados_bruto.limit(70_000)
+
+logging.info('Iniciando a equalização do dataset ENEM_MICRODADOS')
 df_enem_microdados_tratado = df_enem_microdados_bruto.select(
     col('NU_INSCRICAO').cast(StringType()).alias('NUMERO_INSCRICAO'),
     col('NU_ANO').cast(IntegerType()).alias('ANO'),
@@ -355,16 +408,20 @@ df_enem_microdados_tratado = df_enem_microdados_bruto.select(
     col('Q024').cast(StringType()),
     col('Q025').cast(StringType())
 )
+logging.info('Equalização do dataset fies ENEM_MICRODADOS')
 
-df_enem_microdados_tratados = df_enem_microdados_tratado.limit(20_000)
-
-df_enem_microdados_tratados \
+logging.info('Iniciando upload do dataset ENEM_MICRODADOS para S3_DADOS_TRATADOS')
+df_enem_microdados_tratado \
     .coalesce(1) \
     .write \
     .mode('append') \
     .csv(f'{BUCKETS[1].get("s3_dados_tratados")}/{DATE_NOW}/enem/microdados/')
 
-df_enem_microdados_tratados.write.mode("overwrite") \
+logging.info('Upload do dataset ENEM_MICRODADOS para S3_DADOS_TRATADOS finalizado')
+
+
+logging.info('Iniciando o insert no database ENEM_MICRODADOS')
+df_enem_microdados_tratado.write.mode("overwrite") \
     .format("jdbc") \
     .option('url', f'{AMBIENTE[0].get("prod-url")}') \
     .option("dbtable", 'ENEM_MICRODADOS') \
@@ -372,4 +429,11 @@ df_enem_microdados_tratados.write.mode("overwrite") \
     .option("password", f'{AMBIENTE[0].get("pass")}') \
     .option("driver", "com.microsoft.sqlserver.jdbc.SQLServerDriver") \
     .save()
+logging.info('Insert no database ENEM_MICRODADOS finalizado')
 
+# Liberando o dataframe da memória e disco
+logging.info('Removendo dataframe ENEM_MICRODADOS da memória')
+df_enem_microdados_tratado.unpersist()
+
+# Fechando a sessão do spark
+spark.stop()
