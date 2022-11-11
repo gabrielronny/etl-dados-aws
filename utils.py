@@ -16,7 +16,6 @@ def getBuckets():
     ]
     return BUCKETS
 
-
 def getAmbiente():
     ## AMBIENTE AZURE
     AMBIENTE: Sequence[Mapping[str, Any]] = [

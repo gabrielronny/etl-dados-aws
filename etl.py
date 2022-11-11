@@ -1,6 +1,6 @@
 from pyspark import SparkConf
 from pyspark.sql import SparkSession
-from datetime import datetime
+
 import logging
 
 from pyspark.sql.functions import lit
@@ -11,8 +11,6 @@ from pyspark.sql.types import DoubleType
 
 import utils
 
-# DATA DE PROCESSAMENTO
-DATE_NOW = str(datetime.now().strftime("%d_%m_%Y"))
 
 logging.basicConfig(filename=f'log.txt', level=logging.DEBUG,
                     format="%(asctime)s %(message)s")
@@ -28,7 +26,7 @@ conf.set('spark.jars.packages',
 conf.set('spark.hadoop.fs.s3a.aws.credentials.provider', 'com.amazonaws.auth.InstanceProfileCredentialsProvider')
 spark = SparkSession.builder.config(conf=conf).getOrCreate()
 
-def processar_dados_fies(nome_arquivo):
+def processar_dados_fies(nome_arquivo, data_processamento):
     logging.info('Leitura dataset FIES iniciado')
     # Lendo o CSV e tratando o tipo de encoding para a ISO-8859-1
     df_inscricao_fies_bruto = spark.read \
@@ -106,7 +104,7 @@ def processar_dados_fies(nome_arquivo):
     logging.info('Equalização do dataset FIES finalizado')
 
     df_inscricao_fies_tratado = df_inscricao_fies_tratado.withColumn('DATA_PROCESSAMENTO',
-                                                                     lit(DATE_NOW.replace('_', '/')))
+                                                                     lit(data_processamento.replace('_', '/')))
     logging.info('Iniciando upload do dataset FIES para S3_DADOS_TRATADOS')
     # Salvando o arquivo processado com os dados de inscrição no fies tratados na S3
     df_inscricao_fies_tratado \
@@ -114,7 +112,7 @@ def processar_dados_fies(nome_arquivo):
         .write \
         .mode('append') \
         .option('encoding', 'UTF-8') \
-        .csv(f'{utils.getBuckets()[1].get("s3_dados_tratados")}/{DATE_NOW}/fies/')
+        .csv(f'{utils.getBuckets()[1].get("s3_dados_tratados")}/{data_processamento}/fies/')
     logging.info('Upload do dataset fies para S3_DADOS_TRATADOS finalizado')
 
 
@@ -136,7 +134,7 @@ def processar_dados_fies(nome_arquivo):
     logging.info('Processamento FIES finalizado')
 
 
-def processar_dados_prouni(nome_arquivo):
+def processar_dados_prouni(nome_arquivo, data_processamento):
     # Dados do prouni
     logging.info('Leitura dataset prouni iniciado')
     df_prouni_bruto = spark.read \
@@ -167,7 +165,7 @@ def processar_dados_prouni(nome_arquivo):
     logging.info('Equalização do dataset prouni finalizado')
 
     df_prouni_tratado = df_prouni_tratado.withColumn('DATA_PROCESSAMENTO',
-                                                     lit(DATE_NOW.replace('_', '/')))
+                                                     lit(data_processamento.replace('_', '/')))
 
     logging.info('Iniciando upload do dataset prouni para S3_DADOS_TRATADOS')
     df_prouni_tratado \
@@ -175,7 +173,7 @@ def processar_dados_prouni(nome_arquivo):
         .write \
         .mode('append') \
         .option('encoding', 'ISO-8859-1') \
-        .csv(f'{utils.getBuckets()[1].get("s3_dados_tratados")}/{DATE_NOW}/prouni/')
+        .csv(f'{utils.getBuckets()[1].get("s3_dados_tratados")}/{data_processamento}/prouni/')
     logging.info('Upload do dataset prouni para S3_DADOS_TRATADOS finalizado')
 
 
@@ -196,7 +194,7 @@ def processar_dados_prouni(nome_arquivo):
     logging.info('Processamento PROUNI finalizado')
 
 
-def processar_dados_inmet(nome_arquivo):
+def processar_dados_inmet(nome_arquivo, data_processamento):
 
     # Dados de clima Inmet
     logging.info('Leitura dataset INMET iniciado')
@@ -233,7 +231,7 @@ def processar_dados_inmet(nome_arquivo):
     logging.info('Equalização do dataset INMET finalizado')
 
     df_inmet_tratado = df_inmet_tratado.withColumn('DATA_PROCESSAMENTO',
-                                                    lit(DATE_NOW.replace('_', '/')))
+                                                    lit(data_processamento.replace('_', '/')))
 
     logging.info('Iniciando upload do dataset INMET para S3_DADOS_TRATADOS')
     df_inmet_tratado \
@@ -241,7 +239,7 @@ def processar_dados_inmet(nome_arquivo):
         .write \
         .mode('append') \
         .option('encoding', 'ISO-8859-1') \
-        .csv(f'{utils.getBuckets()[1].get("s3_dados_tratados")}/{DATE_NOW}/inmet/')
+        .csv(f'{utils.getBuckets()[1].get("s3_dados_tratados")}/{data_processamento}/inmet/')
     logging.info('Upload do dataset INMET para S3_DADOS_TRATADOS finalizado')
 
     logging.info('Iniciando o insert no database INMET')
@@ -260,7 +258,7 @@ def processar_dados_inmet(nome_arquivo):
     df_inmet_tratado.unpersist()
 
 
-def processar_dados_itens_prova(nome_arquivo):
+def processar_dados_itens_prova(nome_arquivo, data_processamento):
 
 
     # Itens prova ENEM
@@ -289,14 +287,14 @@ def processar_dados_itens_prova(nome_arquivo):
     )
 
     df_enem_itens_prova_tratado = df_enem_itens_prova_tratado.withColumn('DATA_PROCESSAMENTO',
-                                                                        lit(DATE_NOW.replace('_', '/')))
+                                                                        lit(data_processamento.replace('_', '/')))
 
     logging.info('Iniciando upload do dataset ENEM_ITENS_PROVA para S3_DADOS_TRATADOS')
     df_enem_itens_prova_tratado \
         .coalesce(1) \
         .write \
         .mode('append') \
-        .csv(f'{utils.getBuckets()[1].get("s3_dados_tratados")}/{DATE_NOW}/enem/itens_prova/')
+        .csv(f'{utils.getBuckets()[1].get("s3_dados_tratados")}/{data_processamento}/enem/itens_prova/')
     logging.info('Upload do dataset ENEM_ITENS_PROVA para S3_DADOS_TRATADOS finalizado')
 
     logging.info('Iniciando o insert no database ENEM_ITENS_PROVA')
@@ -317,7 +315,7 @@ def processar_dados_itens_prova(nome_arquivo):
     logging.info('Processamento ENEM_ITENS_PROVA finalizado')
 
 
-def processar_microdados_enem(nome_arquivo):
+def processar_microdados_enem(nome_arquivo, data_processamento):
 
 
     logging.info('Leitura dataset ENEM_MICRODADOS iniciado')
@@ -415,15 +413,14 @@ def processar_microdados_enem(nome_arquivo):
     )
     logging.info('Equalização do dataset fies ENEM_MICRODADOS')
 
-    df_enem_microdados_tratado = df_enem_microdados_tratado.withColumn('DATA_PROCESSAMENTO',
-                                                                     lit(DATE_NOW.replace('_', '/')))
+    df_enem_microdados_tratado = df_enem_microdados_tratado.withColumn('DATA_PROCESSAMENTO', lit(data_processamento.replace('_', '/')))
 
     logging.info('Iniciando upload do dataset ENEM_MICRODADOS para S3_DADOS_TRATADOS')
     df_enem_microdados_tratado \
         .coalesce(1) \
         .write \
         .mode('append') \
-        .csv(f'{utils.getBuckets()[1].get("s3_dados_tratados")}/{DATE_NOW}/enem/microdados/')
+        .csv(f'{utils.getBuckets()[1].get("s3_dados_tratados")}/{data_processamento}/enem/microdados/')
 
     logging.info('Upload do dataset ENEM_MICRODADOS para S3_DADOS_TRATADOS finalizado')
 
