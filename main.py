@@ -6,7 +6,7 @@ import etl
 from datetime import datetime
 
 s3 = boto3.resource('s3')
-bucket_dados_brutos = s3.Bucket(utils.getBuckets()[0].get("s3_dados_brutos"))
+bucket_dados_brutos = s3.Bucket(utils.getBuckets()[0].get("s3_dados_brutos").replace('s3a://', ''))
 fila_processamento = []
 fila_processado = []
 
@@ -36,4 +36,7 @@ while True:
         fila_processado.append(fila_processamento[i])
         fila_processamento.remove(fila_processamento[i])
         i -= 1
+
+    if fila_processamento:
+        print('Não possui arquivos para processar')
     time.sleep(60)

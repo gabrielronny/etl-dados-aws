@@ -11,7 +11,6 @@ from pyspark.sql.types import DoubleType
 
 import utils
 
-
 logging.basicConfig(filename=f'log.txt', level=logging.DEBUG,
                     format="%(asctime)s %(message)s")
 
