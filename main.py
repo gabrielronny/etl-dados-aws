@@ -37,6 +37,6 @@ while True:
         fila_processamento.remove(fila_processamento[i])
         i -= 1
 
-    if fila_processamento:
-        print('Não possui arquivos para processar')
+    if not fila_processamento:
+        print('Sem arquivos para processar')
     time.sleep(60)
