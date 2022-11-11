@@ -10,7 +10,9 @@ out/
 # Jupyter
 *.ipynb
 
-
 ### Virtual Env
 venv/*
 .env
+
+### Python
+__pycache__/*
