@@ -10,9 +10,6 @@ from pyspark.sql.types import IntegerType
 from pyspark.sql.types import StringType
 from pyspark.sql.types import DoubleType
 
-
-
-
 ## BUCKETS S3
 BUCKETS: Sequence[Mapping[str, Any]] = [
     {
@@ -56,7 +53,7 @@ conf.set('spark.jars.packages', 'org.apache.hadoop:hadoop-aws:3.2.2,com.microsof
 conf.set('spark.hadoop.fs.s3a.aws.credentials.provider', 'com.amazonaws.auth.InstanceProfileCredentialsProvider')
 spark = SparkSession.builder.config(conf=conf).getOrCreate()
 
-logging.info('Leitura dataset fies iniciado')
+logging.info('Leitura dataset FIES iniciado')
 # Lendo o CSV e tratando o tipo de encoding para a ISO-8859-1
 df_inscricao_fies_20211_bruto = spark.read \
     .option('encoding', 'ISO-8859-1') \
@@ -73,7 +70,7 @@ logging.info('Leitura dataset fies finalizado')
 
 df_inscricao_fies_2021 = df_inscricao_fies_20211_bruto.union(df_inscricao_fies_20212_bruto)
 
-logging.info('Iniciando a equalização do dataset fies')
+logging.info('Iniciando a equalização do dataset FIES')
 df_inscricao_fies_2021_tratado = df_inscricao_fies_2021.select(
     col('Ano do processo seletivo').cast(StringType()).alias('ANO_PROCESSO_SELETIVO'),
     col('Semestre do processo seletivo').cast(StringType()).alias('SEMESTRE_PROCESSO_SELETIVO'),
@@ -131,9 +128,9 @@ df_inscricao_fies_2021_tratado = df_inscricao_fies_2021.select(
     col('Qtde semestre financiado').cast(IntegerType()).alias('QTDE_SEMESTRE_FINANCIADO'),
 )
 
-logging.info('Equalização do dataset fies finalizado')
+logging.info('Equalização do dataset FIES finalizado')
 
-logging.info('Iniciando upload do dataset fies para S3_DADOS_TRATADOS')
+logging.info('Iniciando upload do dataset FIES para S3_DADOS_TRATADOS')
 # Salvando o arquivo processado com os dados de inscrição no fies tratados na S3
 df_inscricao_fies_2021_tratado \
     .coalesce(1) \
@@ -276,6 +273,7 @@ logging.info('Leitura dataset ENEM_ITENS_PROVA iniciado')
 df_enem_itens_prova_bruto = spark.read \
     .option('delimiter', ';') \
     .option('header', 'true') \
+    .option('encoding', 'ISO-8859-1') \
     .csv(f'{BUCKETS[0].get("s3_dados_brutos")}/enem/ITENS_PROVA_2021.csv')
 logging.info('Leitura dataset INMET finalizado')
 
@@ -324,6 +322,7 @@ logging.info('Leitura dataset ENEM_MICRODADOS iniciado')
 df_enem_microdados_bruto = spark.read \
     .option('delimiter', ';') \
     .option('header', 'true') \
+    .option('encoding', 'ISO-8859-1') \
     .csv(f'{BUCKETS[0].get("s3_dados_brutos")}/enem/MICRODADOS_ENEM_2021.csv')
 logging.info('Leitura dataset ENEM_MICRODADOS finalizado')
 
