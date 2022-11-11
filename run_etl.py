@@ -11,6 +11,8 @@ from pyspark.sql.types import StringType
 from pyspark.sql.types import DoubleType
 
 
+
+
 ## BUCKETS S3
 BUCKETS: Sequence[Mapping[str, Any]] = [
     {
@@ -41,9 +43,11 @@ AMBIENTE: Sequence[Mapping[str, Any]] = [
 # DATA DE PROCESSAMENTO
 DATE_NOW = datetime.now().strftime("%d_%m_%Y")
 
-
-logging.basicConfig(filename=f'{BUCKETS[2].get("s3_logs")}/DATE_NOW/log.txt', level=logging.DEBUG,
+logging.basicConfig(filename=f'log.txt', level=logging.DEBUG,
                     format="%(asctime)s %(message)s")
+
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 logging.info('Sessão do SPARK iniciada')
 ## Iniciando Sessão no Spark
