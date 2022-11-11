@@ -1,8 +1,7 @@
-import os
 import boto3
 import time
 import utils
-import etl
+import processamento_spark
 from datetime import datetime
 
 s3 = boto3.resource('s3')
@@ -24,15 +23,15 @@ while True:
         nome_arquivo = fila_processamento[i].split('/')[1]
         if origem == 'enem':
             if nome_arquivo in 'MICRODADOS':
-                etl.processar_microdados_enem(nome_arquivo, data_processamento)
+                processamento_spark.processar_microdados_enem(nome_arquivo, data_processamento)
             elif nome_arquivo in 'ITENS_PROVA':
-                etl.processar_dados_itens_prova(nome_arquivo, data_processamento)
+                processamento_spark.processar_dados_itens_prova(nome_arquivo, data_processamento)
         elif origem == 'fies':
-            etl.processar_dados_fies(nome_arquivo, data_processamento)
+            processamento_spark.processar_dados_fies(nome_arquivo, data_processamento)
         elif origem == 'inmet':
-            etl.processar_dados_inmet(nome_arquivo, data_processamento)
+            processamento_spark.processar_dados_inmet(nome_arquivo, data_processamento)
         elif origem == 'prouni':
-            etl.processar_dados_prouni(nome_arquivo, data_processamento)
+            processamento_spark.processar_dados_prouni(nome_arquivo, data_processamento)
         fila_processado.append(fila_processamento[i])
         fila_processamento.remove(fila_processamento[i])
         i -= 1
