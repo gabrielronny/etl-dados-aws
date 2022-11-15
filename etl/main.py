@@ -22,9 +22,9 @@ while True:
         origem = fila_processamento[i].split('/')[0]
         nome_arquivo = fila_processamento[i].split('/')[1]
         if origem == 'enem':
-            if nome_arquivo in 'MICRODADOS':
+            if 'MICRODADOS' in nome_arquivo:
                 processamento_spark.processar_microdados_enem(nome_arquivo, data_processamento)
-            elif nome_arquivo in 'ITENS_PROVA':
+            elif 'ITENS_PROVA' in nome_arquivo:
                 processamento_spark.processar_dados_itens_prova(nome_arquivo, data_processamento)
         elif origem == 'fies':
             processamento_spark.processar_dados_fies(nome_arquivo, data_processamento)
