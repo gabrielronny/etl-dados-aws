@@ -2,6 +2,7 @@ from pyspark import SparkConf
 from pyspark.sql import SparkSession
 
 import logging
+import sys
 
 from pyspark.sql.functions import lit
 from pyspark.sql.functions import col
@@ -11,11 +12,14 @@ from pyspark.sql.types import DoubleType
 
 import utils
 
-logging.basicConfig(filename=f'log.txt', level=logging.DEBUG,
-                    format="%(asctime)s %(message)s")
-
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
+
+formatter = logging.Formatter(fmt="%(asctime)s %(name)s.%(levelname)s: %(message)s", datefmt="%Y.%m.%d %H:%M:%S")
+handler = logging.StreamHandler(stream=sys.stdout)
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+
 
 logging.info('Sessão do SPARK iniciada')
 ## Iniciando Sessão no Spark
