@@ -3,6 +3,8 @@ import time
 import utils
 import processamento_spark
 from datetime import datetime
+import logging
+import sys
 
 s3 = boto3.resource('s3')
 bucket_dados_brutos = s3.Bucket(utils.getBuckets()[0].get("s3_dados_brutos").replace('s3a://', ''))
@@ -11,6 +13,15 @@ fila_processado = []
 
 # DATA DE PROCESSAMENTO
 data_processamento = str(datetime.now().strftime("%d_%m_%Y"))
+
+
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
+formatter = logging.Formatter(fmt="%(asctime)s %(name)s.%(levelname)s: %(message)s", datefmt="%Y.%m.%d %H:%M:%S")
+handler = logging.StreamHandler(stream=sys.stdout)
+handler.setFormatter(formatter)
+logger.addHandler(handler)
 
 while True:
     for bucket in bucket_dados_brutos.objects.all():
@@ -37,5 +48,5 @@ while True:
         i -= 1
 
     if not fila_processamento:
-        print('Sem arquivos para processar')
+        logging.info('Sem arquivos para processar')
     time.sleep(60)
