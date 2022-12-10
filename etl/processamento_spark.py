@@ -54,7 +54,7 @@ def processar_dados_fies(nome_arquivo, data_processamento):
             trim(`Pessoa com deficiência?`)                                                                           as PESSOAL_COM_DEFICIENCIA,
             trim(`Tipo de escola no ensino médio`)                                                                    as TIPO_ESCOLA_ENSINO_MEDIO,
             cast(trim(`Ano conclusão ensino médio`) as bigint)                                                        as ANO_CONCLUSAO_ENSINO_MEDIO,
-            trim(`Concluiu curso superior?`)                                                                          as IS_ONCLUIU_CURSO_SUPERIOR,
+            trim(`Concluiu curso superior?`)                                                                          as IS_CONCLUIU_CURSO_SUPERIOR,
             trim(`Professor rede pública ensino?`)                                                                    as IS_PROFESSOR_REDE_PUBLICA_ENSINO,
             cast(trim(`Nº de membros Grupo Familiar`) as bigint)                                                      as QTDE_MEMBROS_GRUPO_FAMILIAR,
             cast(replace(trim(`Renda familiar mensal bruta`), ',' , '.')                                              as double) as RENDA_FAMILIAR_MENSAL_BRUTA,
@@ -470,6 +470,42 @@ def processar_microdados_enem(nome_arquivo, data_processamento):
     df_enem_microdados_tratado.unpersist()
     df_enem_microdados_bruto.unpersist()
     spark.catalog.dropTempView("tb_temp_microdados")
+
+def processar_idd(nome_arquivo, data_processamento):
+
+    logging.info('Leitura dataset IDD iniciado')
+    df_idd_bruto = spark.read \
+        .option('delimiter', ';') \
+        .option('header', 'true') \
+        .option('encoding', 'ISO-8859-1') \
+        .csv(f'{utils.getBuckets()[0].get("s3_dados_brutos")}/idd/{nome_arquivo}')
+    logging.info('Leitura dataset IDD finalizado')
+
+    df_idd_bruto.createOrReplaceTempView('tb_temp_idd')
+
+    logging.info('Iniciando a equalização do dataset IDD')
+
+
+
+    df_idd_tratado = spark.sql("""
+
+        SELECT
+            cast(trim(`ANO`) as bigint)                                                                               as ANO,
+            trim(`Código da Área`)                                                                                    as COD_AREA,
+            trim(`Área de Avaliação`)                                                                                 as AREA_AVALIACAO,
+            trim(`Grau Acadêmico`)                                                                                    as GRAU_ACADEMICO,
+            cast(trim(`Código da IES`) as bigint)                                                                     as COD_DA_IES,
+            trim(`Nome da IES*`) as NOME_DA_IES
+            trim(`Sigla da IES*`) as SIGLA_DA_IES
+            trim(`Organização Acadêmica`) as ORGANIZACAO_ACADEMICA
+            trim(``)
+            trim(``)
+            trim(``)
+            trim(``)
+            trim(``)
+            trim(``)
+        FROM tb_temp_idd
+    """)
 
 # Fechando a sessão do spark
 # spark.stop()
