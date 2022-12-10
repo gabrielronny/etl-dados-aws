@@ -350,7 +350,7 @@ def processar_microdados_enem(nome_arquivo, data_processamento):
         .option('delimiter', ';') \
         .option('header', 'true') \
         .option('encoding', 'ISO-8859-1') \
-        .csv(f'{utils.getBuckets()[0].get("s3_dados_brutos")}/enem/MICRODADOS_ENEM_2021.csv')
+        .csv(f'{utils.getBuckets()[0].get("s3_dados_brutos")}/enem/{nome_arquivo}')
     logging.info('Leitura dataset ENEM_MICRODADOS finalizado')
 
 
