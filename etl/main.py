@@ -33,24 +33,24 @@ while True:
     while fila_processamento:
         origem = fila_processamento[i].split('/')[0]
         nome_arquivo = fila_processamento[i].split('/')[1]
-#         if origem == 'enem':
-#             if 'MICRODADOS' in nome_arquivo:
-#                 processamento_spark.processar_microdados_enem(nome_arquivo, data_processamento)
-#             elif 'ITENS_PROVA' in nome_arquivo:
-#                 processamento_spark.processar_dados_itens_prova(nome_arquivo, data_processamento)
-#         elif origem == 'fies':
-#             processamento_spark.processar_dados_fies(nome_arquivo, data_processamento)
-#         elif origem == 'inmet':
-#             processamento_spark.processar_dados_inmet(nome_arquivo, data_processamento)
-#         elif origem == 'prouni':
-#             processamento_spark.processar_dados_prouni(nome_arquivo, data_processamento)
-#         elif origem == 'idd':
-#             processamento_spark.processar_idd(nome_arquivo, data_processamento)
-#         elif origem == 'sptrans':
-#             if 'routes' in nome_arquivo:
-#                 processamento_spark.processar_routes_sptrans(nome_arquivo, data_processamento)
+        if origem == 'enem':
+            if 'MICRODADOS' in nome_arquivo:
+                processamento_spark.processar_microdados_enem(nome_arquivo, data_processamento)
+            elif 'ITENS_PROVA' in nome_arquivo:
+                processamento_spark.processar_dados_itens_prova(nome_arquivo, data_processamento)
+        elif origem == 'fies':
+            processamento_spark.processar_dados_fies(nome_arquivo, data_processamento)
+        elif origem == 'inmet':
+            processamento_spark.processar_dados_inmet(nome_arquivo, data_processamento)
+        elif origem == 'prouni':
+            processamento_spark.processar_dados_prouni(nome_arquivo, data_processamento)
+        elif origem == 'idd':
+            processamento_spark.processar_idd(nome_arquivo, data_processamento)
+        elif origem == 'sptrans':
+            if 'routes' in nome_arquivo:
+                processamento_spark.processar_routes_sptrans(nome_arquivo, data_processamento)
 
-        if origem == 'fatos':
+        elif origem == 'fatos':
             if 'fat_idd' in nome_arquivo:
                 dw.processar_fat_idd(nome_arquivo, data_processamento)
             elif 'fat_fies' in nome_arquivo:
