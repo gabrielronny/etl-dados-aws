@@ -152,7 +152,7 @@ def processar_dados_prouni(nome_arquivo, data_processamento):
 
     df_prouni_bruto.createOrReplaceTempView('tb_temp_prouni')
 
-    logging.info('Iniciando a equalização do dataset prouni')
+    logging.info('Iniciando a equalização do dataset PROUNI')
 
     df_prouni_tratado = spark.sql("""
         SELECT
@@ -179,14 +179,14 @@ def processar_dados_prouni(nome_arquivo, data_processamento):
     df_prouni_tratado = df_prouni_tratado.withColumn('DATA_PROCESSAMENTO',
                                                      lit(data_processamento.replace('_', '/')))
 
-    logging.info('Iniciando upload do dataset prouni para S3_DADOS_TRATADOS')
+    logging.info('Iniciando upload do dataset PROUNI para S3_DADOS_TRATADOS')
     df_prouni_tratado \
         .coalesce(1) \
         .write \
         .mode('append') \
         .option('encoding', 'ISO-8859-1') \
         .csv(f'{utils.getBuckets()[1].get("s3_dados_tratados")}/{data_processamento}/prouni/')
-    logging.info('Upload do dataset prouni para S3_DADOS_TRATADOS finalizado')
+    logging.info('Upload do dataset PROUNI para S3_DADOS_TRATADOS finalizado')
 
 
     logging.info('Iniciando o insert no database PROUNI')
@@ -477,35 +477,122 @@ def processar_idd(nome_arquivo, data_processamento):
     df_idd_bruto = spark.read \
         .option('delimiter', ';') \
         .option('header', 'true') \
-        .option('encoding', 'ISO-8859-1') \
+        .option('encoding', 'UTF-8') \
         .csv(f'{utils.getBuckets()[0].get("s3_dados_brutos")}/idd/{nome_arquivo}')
     logging.info('Leitura dataset IDD finalizado')
 
     df_idd_bruto.createOrReplaceTempView('tb_temp_idd')
 
     logging.info('Iniciando a equalização do dataset IDD')
-
-
-
     df_idd_tratado = spark.sql("""
-
         SELECT
-            cast(trim(`ANO`) as bigint)                                                                               as ANO,
+            cast(trim(`Ano`) as bigint)                                                                               as ANO,
             trim(`Código da Área`)                                                                                    as COD_AREA,
             trim(`Área de Avaliação`)                                                                                 as AREA_AVALIACAO,
             trim(`Grau Acadêmico`)                                                                                    as GRAU_ACADEMICO,
             cast(trim(`Código da IES`) as bigint)                                                                     as COD_DA_IES,
-            trim(`Nome da IES*`) as NOME_DA_IES
-            trim(`Sigla da IES*`) as SIGLA_DA_IES
-            trim(`Organização Acadêmica`) as ORGANIZACAO_ACADEMICA
-            trim(``)
-            trim(``)
-            trim(``)
-            trim(``)
-            trim(``)
-            trim(``)
+            trim(`Nome da IES*`)                                                                                      as NOME_DA_IES,
+            trim(`Sigla da IES*`)                                                                                     as SIGLA_DA_IES,
+            trim(`Organização Acadêmica`)                                                                             as ORGANIZACAO_ACADEMICA,
+            trim(`Categoria Administrativa`)                                                                          as CATEGORIA_ADMINISTRATIVA,
+            cast(trim(`Código do Curso`) as bigint)                                                                   as COD_CURSO,
+            trim(`Modalidade de Ensino`)                                                                              as MODALIDADE_DE_ENSINO,
+            cast(trim(`Código do Município**`) as bigint)                                                             as COD_MUNICIPIO,
+            trim(`Município do Curso**`)                                                                              as MUNICIPIO_CURSO,
+            trim(`Sigla da UF**`)                                                                                     as SIGLA_UF,
+            cast(trim(`Nº de Concluintes Inscritos`) as bigint)                                                       as NUM_CONCLUINTES_INCRITOS,
+            cast(trim(`Nº de Concluintes Participantes`) as bigint)                                                   as NUM_CONCLUINTES_PARTICIPANTES,
+            cast(trim(`Nº de Concluintes Participantes com nota no Enem`) as bigint)                                  as NUM_CONCLUINTES_PARTICIPANTES_COM_NOTA_ENEM,
+            cast(replace(trim(`Proporção de Concluintes participantes com nota no Enem`), ',' ,'.') as double)        as PROPORCAO_CONCLUINTES_PARTICIPANTES_COM_NOTA_ENEM,
+            cast(replace(trim(`Nota Bruta - IDD`), ',' ,'.') as double)                                               as NOTA_BRUTA_IDD,
+            cast(replace(trim(`IDD (Contínuo)`), ',' ,'.') as double)                                                 as IDD_CONTINUO,
+            trim(`IDD (Faixa)`)                                                                                       as IDD_FAIXA,
+            trim(`Observação`)                                                                                        as OBSERVACAO
         FROM tb_temp_idd
     """)
+    logging.info('Equalização do dataset IDD')
+
+    df_idd_tratado = df_idd_tratado.withColumn('DATA_PROCESSAMENTO', lit(data_processamento.replace('_', '/')))
+
+    logging.info('Iniciando upload do dataset IDD para S3_DADOS_TRATADOS')
+    df_idd_tratado \
+        .coalesce(1) \
+        .write \
+        .mode('append') \
+        .csv(f'{utils.getBuckets()[1].get("s3_dados_tratados")}/{data_processamento}/idd/')
+    logging.info('Upload do dataset IDD para S3_DADOS_TRATADOS finalizado')
+
+    logging.info('Iniciando o insert no database IDD')
+    df_idd_tratado.write.mode("append") \
+        .format("jdbc") \
+        .option('url', f'{utils.getAmbiente()[0].get("prod-url")}') \
+        .option("dbtable", 'IDD') \
+        .option("user", f'{utils.getAmbiente()[0].get("user")}') \
+        .option("password", f'{utils.getAmbiente()[0].get("pass")}') \
+        .option("driver", "com.microsoft.sqlserver.jdbc.SQLServerDriver") \
+        .save()
+    logging.info('Insert no database IDD finalizado')
+
+    # Liberando o dataframe da memória e disco
+    logging.info('Removendo dataframe IDD da memória')
+    df_idd_tratado.unpersist()
+    df_idd_bruto.unpersist()
+    spark.catalog.dropTempView("tb_temp_idd")
+
+
+def processar_routes_sptrans(nome_arquivo, data_processamento):
+
+    logging.info('Leitura dataset ROUTES SPTRANS iniciado')
+    df_routes_sptrans_bruto = spark.read \
+        .option('delimiter', ',') \
+        .option('header', 'true') \
+        .option('encoding', 'UTF-8') \
+        .csv(f'{utils.getBuckets()[0].get("s3_dados_brutos")}/sptrans/{nome_arquivo}')
+
+    logging.info('Leitura dataset ROUTES SPTRANS finalizado')
+
+    df_routes_sptrans_bruto.createOrReplaceTempView('tb_routes_sptrans')
+
+    logging.info('Iniciando a equalização do dataset ROUTES SPTRANS')
+
+    df_routes_sptrans_tratado = spark.sql("""
+        SELECT
+            trim(`route_id`)                                                                                          as ID_ROTA,
+            cast(trim(`agency_id`) as bigint)                                                                         as ID_AGENCIA,
+            trim(`route_short_name`)                                                                                  as NOME_ROTA_ID,
+            trim(`route_long_name`)                                                                                   as DESC_ROTA,
+            cast(trim(`route_type`) as bigint)                                                                        as TIPO_ROTA,
+            trim(`route_color`)                                                                                       as COR_ROTA,
+            trim(`route_text_color`)                                                                                  as COR_TEXTO_ROTA
+        FROM tb_routes_sptrans
+    """)
+
+    df_routes_sptrans_tratado = df_routes_sptrans_tratado.withColumn('DATA_PROCESSAMENTO', lit(data_processamento.replace('_', '/')))
+
+    logging.info('Iniciando upload do dataset ROUTES SPTRANS para S3_DADOS_TRATADOS')
+    df_routes_sptrans_tratado \
+        .coalesce(1) \
+        .write \
+        .mode('append') \
+        .csv(f'{utils.getBuckets()[1].get("s3_dados_tratados")}/{data_processamento}/sptrans/routes/')
+    logging.info('Upload do dataset ROUTES SPTRANS para S3_DADOS_TRATADOS finalizado')
+
+    logging.info('Iniciando o insert no database ROUTES SPTRANS')
+    df_routes_sptrans_tratado.write.mode("append") \
+        .format("jdbc") \
+        .option('url', f'{utils.getAmbiente()[0].get("prod-url")}') \
+        .option("dbtable", 'ROUTES_SPTRANS') \
+        .option("user", f'{utils.getAmbiente()[0].get("user")}') \
+        .option("password", f'{utils.getAmbiente()[0].get("pass")}') \
+        .option("driver", "com.microsoft.sqlserver.jdbc.SQLServerDriver") \
+        .save()
+    logging.info('Insert no database ROUTES SPTRANS finalizado')
+
+    # Liberando o dataframe da memória e disco
+    logging.info('Removendo dataframe ROUTES SPTRANS da memória')
+    df_routes_sptrans_tratado.unpersist()
+    df_routes_sptrans_bruto.unpersist()
+    spark.catalog.dropTempView("tb_routes_sptrans")
 
 # Fechando a sessão do spark
 # spark.stop()
