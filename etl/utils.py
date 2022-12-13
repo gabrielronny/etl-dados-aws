@@ -23,6 +23,7 @@ def getAmbiente():
             'prod-url': os.environ.get('URL_DATABASE_AZURE_PROD'),
             'user': os.environ.get('USER_DATABASE_AZURE_PROD'),
             'pass': os.environ.get('PASS_DATABASE_AZURE_PROD'),
+            'dw-url': os.environ.get('URL_DW_AZURE_PROD')
         },
         {
             'dev-url': os.environ.get('URL_DATABASE_AZURE_DEV'),
