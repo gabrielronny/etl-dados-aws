@@ -44,12 +44,13 @@ while True:
             processamento_spark.processar_dados_inmet(nome_arquivo, data_processamento)
         elif origem == 'prouni':
             processamento_spark.processar_dados_prouni(nome_arquivo, data_processamento)
+        elif origem == 'iot':
+            processamento_spark.processar_dados_iot(nome_arquivo, data_processamento)
         elif origem == 'idd':
             processamento_spark.processar_idd(nome_arquivo, data_processamento)
         elif origem == 'sptrans':
             if 'routes' in nome_arquivo:
                 processamento_spark.processar_routes_sptrans(nome_arquivo, data_processamento)
-
         elif origem == 'fatos':
             if 'fat_idd' in nome_arquivo:
                 dw.processar_fat_idd(nome_arquivo, data_processamento)

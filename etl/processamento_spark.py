@@ -594,5 +594,60 @@ def processar_routes_sptrans(nome_arquivo, data_processamento):
     df_routes_sptrans_bruto.unpersist()
     spark.catalog.dropTempView("tb_routes_sptrans")
 
+
+def processar_dados_iot(nome_arquivo, data_processamento):
+    logging.info('Leitura dataset IOT iniciado')
+    df_iot_bruto = spark.read \
+        .option('delimiter', ',') \
+        .option('header', 'true') \
+        .option('encoding', 'UTF-8') \
+        .csv(f'{utils.getBuckets()[0].get("s3_dados_brutos")}/iot/{nome_arquivo}')
+
+    logging.info('Leitura dataset ROUTES SPTRANS finalizado')
+
+    df_iot_bruto.createOrReplaceTempView('tb_iot')
+
+    logging.info('Iniciando a equalização do dataset IOT')
+
+    df_iot_tratado = spark.sql("""
+        SELECT
+            person_id,
+            time,
+            lat,
+            lon,
+            battery,
+            current_station
+        FROM tb_iot
+    """)
+
+    df_iot_tratado = df_iot_tratado.withColumn('DATA_PROCESSAMENTO', lit(data_processamento.replace('_', '/')))
+
+    logging.info('Iniciando upload do dataset IOT para S3_DADOS_TRATADOS')
+    df_iot_tratado \
+        .coalesce(1) \
+        .write \
+        .mode('append') \
+        .csv(f'{utils.getBuckets()[1].get("s3_dados_tratados")}/{data_processamento}/sptrans/routes/')
+    logging.info('Upload do dataset ROUTES SPTRANS para S3_DADOS_TRATADOS finalizado')
+
+    logging.info('Iniciando o insert no database IOT')
+    df_iot_tratado.write.mode("append") \
+        .format("jdbc") \
+        .option('url', f'{utils.getAmbiente()[0].get("prod-url")}') \
+        .option("dbtable", 'IOT') \
+        .option("user", f'{utils.getAmbiente()[0].get("user")}') \
+        .option("password", f'{utils.getAmbiente()[0].get("pass")}') \
+        .option("driver", "com.microsoft.sqlserver.jdbc.SQLServerDriver") \
+        .save()
+    logging.info('Insert no database IOT finalizado')
+
+    # Liberando o dataframe da memória e disco
+    logging.info('Removendo dataframe IOT da memória')
+    df_iot_tratado.unpersist()
+    df_iot_bruto.unpersist()
+    spark.catalog.dropTempView("tb_iot")
+
+
+
 # Fechando a sessão do spark
 # spark.stop()
